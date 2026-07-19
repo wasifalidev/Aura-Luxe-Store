@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Aura Luxe — Premium Signature Objects & Crafted Essentials",
   description: "Curating the world's most thoughtfully designed objects. Discover premium furniture, electronics, and lifestyle accessories designed for modern minimalist aesthetics.",
-  metadataBase: new URL("https://aura-luxe-store.vercel.app"),
+  metadataBase: new URL("https://auraluxestore.vercel.app"),
   openGraph: {
     title: "Aura Luxe — Premium Signature Objects & Crafted Essentials",
     description: "Curating the world's most thoughtfully designed objects. Discover premium furniture, electronics, and lifestyle accessories designed for modern minimalist aesthetics.",
