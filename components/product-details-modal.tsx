@@ -17,9 +17,10 @@ interface Product {
 interface ProductDetailsModalProps {
   product: Product | null;
   onClose: () => void;
+  onCheckout: (product: Product) => void;
 }
 
-export default function ProductDetailsModal({ product, onClose }: ProductDetailsModalProps) {
+export default function ProductDetailsModal({ product, onClose, onCheckout }: ProductDetailsModalProps) {
   if (!product) return null;
 
   const formattedPrice = new Intl.NumberFormat("en-US", {
@@ -139,7 +140,7 @@ export default function ProductDetailsModal({ product, onClose }: ProductDetails
                 Add to Shopping Bag
               </button>
               <button
-                onClick={() => alert("Proceeding to checkout! (Demo simulation only)")}
+                onClick={() => onCheckout(product)}
                 className="w-full py-4 rounded-2xl font-bold bg-zinc-900 border border-zinc-800 text-white hover:bg-zinc-850 transition-colors"
               >
                 Instant Buy

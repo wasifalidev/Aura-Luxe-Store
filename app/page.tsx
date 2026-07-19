@@ -5,6 +5,7 @@ import { CinematicHero } from "@/components/ui/cinematic-landing-hero";
 import ProductCard from "@/components/product-card";
 import ProductForm from "@/components/product-form";
 import ProductDetailsModal from "@/components/product-details-modal";
+import CheckoutFlow from "@/components/checkout-flow";
 import {
   Plus,
   ShoppingBag,
@@ -133,6 +134,8 @@ export default function Home() {
   const [mounted, setMounted] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [email, setEmail] = useState("");
+  const [checkoutProduct, setCheckoutProduct] = useState<any | null>(null);
+  const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
 
   // Initialize and load products from LocalStorage
   useEffect(() => {
@@ -505,6 +508,19 @@ export default function Home() {
       <ProductDetailsModal
         product={selectedProduct}
         onClose={() => setSelectedProduct(null)}
+        onCheckout={(product) => {
+          setSelectedProduct(null);
+          setCheckoutProduct(product);
+          setIsCheckoutOpen(true);
+        }}
+      />
+      <CheckoutFlow
+        isOpen={isCheckoutOpen}
+        onClose={() => {
+          setIsCheckoutOpen(false);
+          setCheckoutProduct(null);
+        }}
+        product={checkoutProduct}
       />
     </div>
   );
