@@ -14,10 +14,17 @@ interface Product {
   reviewsCount: number;
 }
 
+interface CartItem {
+  product: Product;
+  quantity: number;
+}
+
 interface CheckoutFlowProps {
   isOpen: boolean;
   onClose: () => void;
   product: Product | null;
+  cartItems?: CartItem[];
+  onOrderSuccess?: () => void;
 }
 
 // Confetti Particle Class for Canvas Confetti
@@ -60,7 +67,7 @@ class ConfettiParticle {
   }
 }
 
-export default function CheckoutFlow({ isOpen, onClose, product }: CheckoutFlowProps) {
+export default function CheckoutFlow({ isOpen, onClose, product, cartItems, onOrderSuccess }: CheckoutFlowProps) {
   // Checkout steps: 1 = Shipping, 2 = Payment, 3 = Processing, 4 = Success
   const [step, setStep] = useState(1);
   const [paymentMethod, setPaymentMethod] = useState<"card" | "cod">("card");
@@ -160,18 +167,32 @@ export default function CheckoutFlow({ isOpen, onClose, product }: CheckoutFlowP
     }
   }, [step]);
 
-  if (!isOpen || !product) return null;
+  if (!isOpen || (!product && (!cartItems || cartItems.length === 0))) return null;
 
   // Formatted Pricing
+  const subtotal = product 
+    ? product.price 
+    : (cartItems ? cartItems.reduce((acc, item) => acc + item.product.price * item.quantity, 0) : 0);
+
   const formattedPrice = new Intl.NumberFormat("en-US", {
     style: "currency",
     currency: "USD",
-  }).format(product.price);
+  }).format(subtotal);
 
+  const shippingFee = subtotal > 500 ? 0 : 10.0;
+  const formattedShipping = shippingFee === 0 ? "Free" : `$${shippingFee.toFixed(2)}`;
+
+  const taxFee = subtotal * 0.05;
+  const formattedTax = new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+  }).format(taxFee);
+
+  const total = subtotal + shippingFee + taxFee;
   const formattedTotal = new Intl.NumberFormat("en-US", {
     style: "currency",
     currency: "USD",
-  }).format(product.price + 15); // Add mock shipping/tax fee
+  }).format(total);
 
   // Validation functions
   const validateShipping = () => {
@@ -242,6 +263,9 @@ export default function CheckoutFlow({ isOpen, onClose, product }: CheckoutFlowP
       if (progress >= 100) {
         clearInterval(interval);
         setStep(4);
+        if (onOrderSuccess) {
+          onOrderSuccess();
+        }
       }
     }, 45); // Takes about 4.5 seconds
     processingRef.current = interval as unknown as number;
@@ -310,18 +334,39 @@ export default function CheckoutFlow({ isOpen, onClose, product }: CheckoutFlowP
               <h3 className="text-xl font-extrabold text-white tracking-tight uppercase border-b border-zinc-800 pb-3">Checkout Details</h3>
               
               {/* Product preview */}
-              <div className="flex gap-4">
-                <img
-                  src={product.image}
-                  alt={product.name}
-                  className="w-20 h-20 object-cover rounded-xl border border-zinc-800"
-                />
-                <div className="space-y-1">
-                  <span className="text-[10px] text-blue-400 font-bold uppercase tracking-wider">{product.category}</span>
-                  <h4 className="text-sm font-bold text-white leading-tight line-clamp-2">{product.name}</h4>
-                  <p className="text-xs text-zinc-500 font-medium">Qty: 1</p>
+              {product ? (
+                <div className="flex gap-4">
+                  <img
+                    src={product.image}
+                    alt={product.name}
+                    className="w-20 h-20 object-cover rounded-xl border border-zinc-800"
+                  />
+                  <div className="space-y-1">
+                    <span className="text-[10px] text-blue-400 font-bold uppercase tracking-wider">{product.category}</span>
+                    <h4 className="text-sm font-bold text-white leading-tight line-clamp-2">{product.name}</h4>
+                    <p className="text-xs text-zinc-500 font-medium">Qty: 1</p>
+                  </div>
                 </div>
-              </div>
+              ) : (
+                <div className="space-y-3 max-h-[160px] overflow-y-auto pr-1">
+                  {cartItems?.map((item) => (
+                    <div key={item.product.id} className="flex gap-3 items-center border-b border-zinc-900 pb-2.5 last:border-b-0 last:pb-0">
+                      <img
+                        src={item.product.image}
+                        alt={item.product.name}
+                        className="w-12 h-12 object-cover rounded-lg border border-zinc-800 bg-zinc-950"
+                      />
+                      <div className="flex-1 min-w-0">
+                        <h4 className="text-xs font-bold text-white truncate">{item.product.name}</h4>
+                        <div className="flex justify-between text-[10px] text-zinc-550 font-bold mt-0.5">
+                          <span>Qty: {item.quantity}</span>
+                          <span>{new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(item.product.price)}</span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
 
               {/* Order breakdown */}
               <div className="space-y-3 pt-4 border-t border-zinc-800/60">
@@ -331,11 +376,11 @@ export default function CheckoutFlow({ isOpen, onClose, product }: CheckoutFlowP
                 </div>
                 <div className="flex justify-between text-xs text-zinc-400">
                   <span>Insured Shipping</span>
-                  <span className="font-semibold text-zinc-200">$10.00</span>
+                  <span className="font-semibold text-zinc-200">{formattedShipping}</span>
                 </div>
                 <div className="flex justify-between text-xs text-zinc-400">
-                  <span>VAT / Local Tax</span>
-                  <span className="font-semibold text-zinc-200">$5.00</span>
+                  <span>VAT / Local Tax (5%)</span>
+                  <span className="font-semibold text-zinc-200">{formattedTax}</span>
                 </div>
                 <div className="flex justify-between text-sm font-bold text-white pt-3 border-t border-zinc-800 border-dashed">
                   <span>Total Amount</span>

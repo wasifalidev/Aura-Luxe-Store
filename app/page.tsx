@@ -6,6 +6,7 @@ import ProductCard from "@/components/product-card";
 import ProductForm from "@/components/product-form";
 import ProductDetailsModal from "@/components/product-details-modal";
 import CheckoutFlow from "@/components/checkout-flow";
+import CartDrawer from "@/components/cart-drawer";
 import {
   Plus,
   ShoppingBag,
@@ -19,6 +20,8 @@ import {
   RefreshCcw,
   Shield,
   Star,
+  Check,
+  X,
 } from "lucide-react";
 
 // Inline SVGs for social icons not available in this lucide-react version
@@ -137,6 +140,77 @@ export default function Home() {
   const [checkoutProduct, setCheckoutProduct] = useState<any | null>(null);
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
 
+  const [cart, setCart] = useState<{ product: any; quantity: number }[]>([]);
+  const [isCartOpen, setIsCartOpen] = useState(false);
+  const [isScrolled, setIsScrolled] = useState(false);
+
+  const [toast, setToast] = useState<{ show: boolean; message: string; type: "success" | "info" }>({
+    show: false,
+    message: "",
+    type: "success",
+  });
+
+  const showToast = (message: string, type: "success" | "info" = "success") => {
+    setToast({ show: true, message, type });
+  };
+
+  // Auto-dismiss toast
+  useEffect(() => {
+    if (toast.show) {
+      const timer = setTimeout(() => {
+        setToast((prev) => ({ ...prev, show: false }));
+      }, 3500);
+      return () => clearTimeout(timer);
+    }
+  }, [toast.show]);
+
+  // Track page scroll to apply background styling to the fixed nav
+  useEffect(() => {
+    const handleScroll = () => {
+      if (window.scrollY > 40) {
+        setIsScrolled(true);
+      } else {
+        setIsScrolled(false);
+      }
+    };
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  // Cart operations
+  const handleAddToCart = (product: any) => {
+    setCart((prev) => {
+      const existing = prev.find((item) => item.product.id === product.id);
+      if (existing) {
+        return prev.map((item) =>
+          item.product.id === product.id ? { ...item, quantity: item.quantity + 1 } : item
+        );
+      }
+      return [...prev, { product, quantity: 1 }];
+    });
+    setIsCartOpen(true);
+    setSelectedProduct(null);
+    showToast(`${product.name} added to shopping bag.`, "info");
+  };
+
+  const handleUpdateCartQuantity = (productId: string, delta: number) => {
+    setCart((prev) =>
+      prev.map((item) =>
+        item.product.id === productId
+          ? { ...item, quantity: Math.max(1, item.quantity + delta) }
+          : item
+      )
+    );
+  };
+
+  const handleRemoveCartItem = (productId: string) => {
+    setCart((prev) => prev.filter((item) => item.product.id !== productId));
+  };
+
+  const handleOrderSuccess = () => {
+    setCart([]);
+  };
+
   // Initialize and load products from LocalStorage
   useEffect(() => {
     setMounted(true);
@@ -189,8 +263,12 @@ export default function Home() {
           The nav floats transparently over it
       ──────────────────────────────────────────────────────────────── */}
       <div className="relative bg-black">
-        {/* Floating Transparent Navigation */}
-        <nav className="absolute top-0 left-0 right-0 z-50 px-6 py-5">
+        {/* Floating Sticky Navigation */}
+        <nav className={`fixed top-0 left-0 right-0 z-50 px-6 transition-all duration-300 ${
+          isScrolled 
+            ? "bg-zinc-950/80 backdrop-blur-md border-b border-zinc-900/85 shadow-lg py-3.5" 
+            : "bg-transparent border-b border-transparent py-5"
+        }`}>
           <div className="max-w-7xl mx-auto flex items-center justify-between">
             {/* Logo */}
             <div className="flex items-center gap-2.5">
@@ -224,11 +302,16 @@ export default function Home() {
                 <Plus className="w-3.5 h-3.5 stroke-[2.5px]" />
                 Add Product
               </button>
-              <div className="relative p-2.5 bg-white/10 hover:bg-white/20 backdrop-blur-md rounded-xl border border-white/10 text-white cursor-pointer transition-colors">
+              <div 
+                onClick={() => setIsCartOpen(true)}
+                className="relative p-2.5 bg-white/10 hover:bg-white/20 backdrop-blur-md rounded-xl border border-white/10 text-white cursor-pointer transition-colors"
+              >
                 <ShoppingBag className="w-4.5 h-4.5" />
-                <span className="absolute -top-1 -right-1 w-4 h-4 bg-blue-500 text-white rounded-full flex items-center justify-center text-[9px] font-black">
-                  {products.length}
-                </span>
+                {cart.length > 0 && (
+                  <span className="absolute -top-1 -right-1 w-4 h-4 bg-blue-500 text-white rounded-full flex items-center justify-center text-[9px] font-black animate-pulse">
+                    {cart.reduce((acc, item) => acc + item.quantity, 0)}
+                  </span>
+                )}
               </div>
             </div>
           </div>
@@ -374,7 +457,7 @@ export default function Home() {
             onSubmit={(e) => {
               e.preventDefault();
               setEmail("");
-              alert("Thank you! You've been added to the waitlist. (Demo)");
+              showToast("Thank you! You have been added to the early access list.", "success");
             }}
             className="flex flex-col sm:flex-row gap-3 max-w-md mx-auto"
           >
@@ -513,6 +596,7 @@ export default function Home() {
           setCheckoutProduct(product);
           setIsCheckoutOpen(true);
         }}
+        onAddToCart={handleAddToCart}
       />
       <CheckoutFlow
         isOpen={isCheckoutOpen}
@@ -521,7 +605,60 @@ export default function Home() {
           setCheckoutProduct(null);
         }}
         product={checkoutProduct}
+        cartItems={checkoutProduct ? undefined : cart}
+        onOrderSuccess={handleOrderSuccess}
       />
+      <CartDrawer
+        isOpen={isCartOpen}
+        onClose={() => setIsCartOpen(false)}
+        cartItems={cart}
+        onUpdateQuantity={handleUpdateCartQuantity}
+        onRemoveItem={handleRemoveCartItem}
+        onCheckout={() => {
+          setIsCartOpen(false);
+          setCheckoutProduct(null);
+          setIsCheckoutOpen(true);
+        }}
+      />
+
+      {/* Reusable Premium Toast Banner */}
+      {toast.show && (
+        <div className="fixed top-24 right-6 z-50 animate-[slide-in-right_0.3s_cubic-bezier(0.16,1,0.3,1)] bg-zinc-950/90 border border-zinc-800 backdrop-blur-xl px-5 py-4 rounded-2xl flex items-center gap-3.5 shadow-2xl max-w-sm">
+          <div className={`w-8 h-8 rounded-xl flex items-center justify-center border shrink-0 ${
+            toast.type === "success" 
+              ? "bg-emerald-950/40 border-emerald-800/40 text-emerald-400" 
+              : "bg-blue-950/40 border-blue-900/40 text-blue-400"
+          }`}>
+            {toast.type === "success" ? <Check className="w-4 h-4" /> : <Sparkles className="w-4 h-4" />}
+          </div>
+          <div>
+            <h5 className="text-[10px] font-black text-white uppercase tracking-wider">
+              {toast.type === "success" ? "Notification" : "Aura Luxe"}
+            </h5>
+            <p className="text-zinc-400 text-xs mt-0.5 leading-relaxed">{toast.message}</p>
+          </div>
+          <button 
+            onClick={() => setToast((prev) => ({ ...prev, show: false }))}
+            className="text-zinc-550 hover:text-white p-1 ml-auto shrink-0 transition-colors"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
+
+      {/* Local keyframes style for slide-in-right animation */}
+      <style>{`
+        @keyframes slide-in-right {
+          from {
+            transform: translateX(120%);
+            opacity: 0;
+          }
+          to {
+            transform: translateX(0);
+            opacity: 1;
+          }
+        }
+      `}</style>
     </div>
   );
 }

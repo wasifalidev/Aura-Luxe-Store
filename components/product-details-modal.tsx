@@ -18,9 +18,10 @@ interface ProductDetailsModalProps {
   product: Product | null;
   onClose: () => void;
   onCheckout: (product: Product) => void;
+  onAddToCart: (product: Product) => void;
 }
 
-export default function ProductDetailsModal({ product, onClose, onCheckout }: ProductDetailsModalProps) {
+export default function ProductDetailsModal({ product, onClose, onCheckout, onAddToCart }: ProductDetailsModalProps) {
   if (!product) return null;
 
   const formattedPrice = new Intl.NumberFormat("en-US", {
@@ -134,7 +135,7 @@ export default function ProductDetailsModal({ product, onClose, onCheckout }: Pr
 
             <div className="flex flex-col gap-3">
               <button
-                onClick={() => alert("Added to Cart! (Demo simulation only)")}
+                onClick={() => onAddToCart(product)}
                 className="w-full py-4 rounded-2xl font-bold bg-white text-black hover:bg-zinc-200 transition-colors shadow-lg shadow-white/5 flex items-center justify-center gap-2"
               >
                 Add to Shopping Bag
